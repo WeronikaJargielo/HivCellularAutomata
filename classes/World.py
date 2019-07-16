@@ -1,104 +1,207 @@
 from classes.Cell import *
+from classes.Probability import *
 import random
 
-class World():
+class World:
+    ### --- constructor of class World --- ###
+    # kwargs.get('nameOfParametr', defaultValue)
+    def __init__(self,**kwargs):
 
-    def __init__(self, rows_, cols_, steps_, numberAliveCellsAtStart_):
-
-        self.rows = rows_ # numbers of rows
-        self.cols = cols_ # numbers of cols
+        ### --- simulation parametrs --- ###
+        self.rows =kwargs.get('rows', 100) # numbers of rows - x
+        self.cols = kwargs.get('cols', 100) # numbers of cols - y
+        self.layers = kwargs.get('layers', 100) # numbers of layers - z
+        self.dimension = self.rows * self.cols * self.layers # dimention of whole grid
+        self.numberOfIterations = kwargs.get('numberOfIterations', 30) # numbers of iterations of simulation
         
-        self.steps = steps_ # numbers of iterations
-        self.numberAliveCellsAtStart = numberAliveCellsAtStart_
+        ### --- states --- ###
+        self.healthy = 0
+        self.infected1 = 1
+        self.infected2 = 2
+        self.dead = 3
+        
+        self.numberOfIterationsInI2State = 2
+        
+        ### --- Initial coditions --- ###
+        # the probability/percentage of initial healthy cell infected by HIV 
+        self.pInitialHIV = kwargs.get('pInitialHIV', 0.0005) # from Alive to I1
 
-        self.printChange = False
+        # probability that a DEAD cell is replenished by an HEALTHY cell 
+        self.pReplenision = Probability(nominator = 99 , denominator = 100) # from Dead to Alive
+
+        # probability that a DEAD cell becomes a HEALTHY cell
+        self.pInfection = Probability(nominator = 974 , denominator = 100000000) # from Dead to I1
+
+        # initial number of cells of type infected 1
+        self.numberOfI1Cell = kwargs.get('numberOfInfected_1_Cell', (self.dimension * self.pInitialHIV)) 
    
-        self.cellsList = []
+        self.cellsList = [] 
+        self.createWorld() # creation of 3D grid of cells
+        self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
+        self.setCellsMates() # setting neighbours of each cell
+    # zapisanie ich indeksów do pliku !!!
 
-    def createWorld(self):
-        for r in range(self.rows): # loop creating list of cells
-            singleRow = []
-            for c in range(self.cols):
-                cell = Cell(myX=r, myY=c)
-                singleRow.append(cell)
-            self.cellsList.append(singleRow)
-        
 
-        ## setting features of World ##
-        self.setParticularStateOfRandomCells(1,self.numberAliveCellsAtStart)
-        for upR in range(self.rows): # loop creating list of cells
-            for upC in range(self.cols):
-                cell = self.cellsList[upR][upC]
-                print([upR,upC]) # print #TESTTTTT
-                neighboursIndexes = self.getCellNeighbourIndex(cell)
-                print(neighboursIndexes) # print ### TESTTTT
-                cell.allMates = neighboursIndexes ## !
-                print(cell.allMates) ##com
-                print(self.getCellNeighbourState(cell))
-        
-                
-    def printWorld(self):
-        for i in range(len(self.cellsList)):
-            print(self.cellsList[i])
+    ### --- creation of the world --- ###
+    def createWorld(self): # creates the whole grid of cells
+        for l in range(self.layers):
+            singleLayer = []
+            for r in range(self.rows): # loop creating list of cells
+                singleRow = []
+                for c in range(self.cols):
+                    cell = Cell(myX = r, myY = c, myZ = l)
+                    singleRow.append(cell)
 
-    def setParticularStateOfRandomCells(self, stateValue, numberOfParticularCell): # generating random list of alive cells
+                singleLayer.append(singleRow)
+
+            self.cellsList.append(singleLayer)
+
+
+    ### --- setting inially infected 1 cells --- ###
+    def setStateOfIntialI1Cell(self, numberOfI1Cell): 
         counter = 0
-        while counter < numberOfParticularCell:
-            tmpXY = [random.randrange(0,self.rows), random.randrange(0,self.cols)]
-            setX = tmpXY[0]; setY = tmpXY[1]
-            if self.cellsList[setX][setY].myState != stateValue:
-                self.cellsList[setX][setY].myState = stateValue
-                self.cellsList[setX][setY].newState = stateValue
+        while counter < self.numberOfI1Cell:
+
+            setX = random.randrange(0, self.rows) 
+            setY = random.randrange(0, self.cols)
+            setZ = random.randrange(0, self.layers)
+
+            if self.cellsList[setZ][setX][setY].myState != self.infected1:
+
+                self.cellsList[setZ][setX][setY].myState = self.infected1
+                self.cellsList[setZ][setX][setY].newState = self.infected1
                 counter = counter + 1
-            else: 
-                pass
 
-    def getCellNeighbourIndex(self,cell): # returns the list of index of cell's neighbours
-        cellsMatesIndexes = []
-        x = cell.myX # x
-        y = cell.myY # y
-        allPossibleMates = [[x-1,y-1],[x,y-1],[x+1,y-1],[x-1,y],[x+1,y],[x-1,y+1],[x,y+1],[x+1,y+1]] # all possible mates
-        for i in range(len(allPossibleMates)): # checking if the cell is not a norrow one
-            try:
-                possibleX = allPossibleMates[i][0] # one of possible mates - X
-                possibleY = allPossibleMates[i][1] # one of possible mates - Y
-                if (possibleX >= 0 and possibleY >= 0):
-                    findOutIfMate = self.cellsList[possibleX][possibleY] # try to get out possible mate 
-                    myMate = [possibleX,possibleY]
-                    cellsMatesIndexes.append(myMate) # append the cellMatesIndex list 
-                else:
-                    pass
-            except IndexError:
-                pass # if error appeared, it means that the cell is the norrow one; do nothing
-        return cellsMatesIndexes
 
-    def getCellNeighbourState(self,cell): # returns the list of cell's neighbours state
-        cellMatesStates = [] # list of states of particular cell
-        cellsMatesIndexes = cell.allMates # indexes of cell's neighbour
-        for i in range(len(cellsMatesIndexes)):
-            tmpX = cellsMatesIndexes[i][0]
-            tmpY = cellsMatesIndexes[i][1]
-            tmpState = self.cellsList[tmpX][tmpY].myState
-            cellMatesStates.append(tmpState)
-        return cellMatesStates
-           
+    ### --- finding out the state of particular cell --- ###
+    def findOutStateOfCell(self, cell):
+        # HEALTHY --> INFECTED 1
+        if cell.myState == self.healthy: 
+            
+            if (    cell.matesInSpecificState(cell.wallMates, self.infected1) >= 1 # I1 cell, wall neighborhood
+                 or cell.matesInSpecificState(cell.lineMates, self.infected1) >= 1 # I1 cell, line neighborhood
+                 or (
+                        cell.matesInSpecificState(cell.wallMates, self.infected2) >= 5 # I2 cell, wall neighborhood
+                    and cell.matesInSpecificState(cell.lineMates, self.infected2) >= 9 # I2 cell, line neighborhood
+                    and cell.matesInSpecificState(cell.pointMates, self.infected2) >= 4 # I2 cell, point neighborhood
+                    )
+                ):
+                
+                cell.newState = self.infected1 
+                cell.stateChanged = True
 
-    def simulateWorld(self): # simulation of world
-        for i in range(self.steps):
+        # INFECTED 1 --> INFECTED 2
+        elif cell.myState == self.infected1: 
+            cell.newState = self.infected2
+            cell.stateChanged = True
+            cell.numberOfI2Iterations = 1
+
+        # INFECTED 2 --> DEAD
+        elif cell.myState == self.infected2:
+            if cell.numberOfI2Iterations == self.numberOfIterationsInI2State:
+                cell.newState = self.dead
+                # cell.numberOfI2Iterations = 0 bo nie potrzebuje
+                cell.stateChanged = True
+            else:
+                cell.numberOfI2Iterations = cell.numberOfI2Iterations + 1
+
+        elif cell.myState == self.dead:
+            self.pInfection.commonDenominator(self.pReplenision)
+            randomProbability = random.randrange(0, self.pInfection.denominator)
+
+            # DEAD --> INFECTED 1
+            if randomProbability < self.pInfection.nominator:
+                cell.newState = self.infected1
+                cell.stateChanged = True
+
+            # DEAD --> HEALTHY
+            elif randomProbability < self.pReplenision.nominator: # (Prep-Pinf) remaining probability
+                cell.newState = self.healthy
+                cell.stateChanged = True
+
+
+    ### --- setting cell's neighbours --- ###
+    def setCellsMates(self):
+
+        wallNeighbors = 1
+        lineNeighbors = 2
+        pointNeighbors = 3
+
+        for l in range(self.layers):
             for r in range(self.rows):
                 for c in range(self.cols):
-                    cell = self.cellsList[r][c]  # single cell
-                    cellMatesStates = self.getCellNeighbourState(cell) # get list of neighbours' states of the cell
-                    cell.findOutMyState(cellMatesStates) # find out new state of cell 
+                    cell = self.cellsList[l][r][c] # specific cell to 
 
-            for upR in range(self.rows): # loops to update states of all cells at once
-                for upC in range(self.cols):
-                    cell = self.cellsList[upR][upC]  # single cell
-                    cell.state = cell.newState # update cell.state of cell
-            print("")
+                    lRange = list(range(l-1, l+2))  # create range [first, last)
+                    rRange = list(range(r-1, r+2))
+                    cRange = list(range(c-1, c+2))
+
+                    if l+1 == self.layers: # sprawdzenie czy nie wychodzi poza zakres
+                        lRange[2] = 0   
+                    if r+1 == self.rows:
+                        rRange[2] = 0  
+                    if c+1 == self.cols:
+                        cRange[2] = 0  
+
+                    
+                    for ll in lRange:
+                        for rr in rRange:
+                            for cc in cRange:
+                                neighbourCell = self.cellsList[ll][rr][cc] 
+                                diffrentIndexes = (ll != cell.myZ) + (rr != cell.myX) + (cc != cell.myY)
+                                if diffrentIndexes == pointNeighbors:
+                                    cell.pointMates.append(neighbourCell)
+                                elif diffrentIndexes == lineNeighbors:
+                                    cell.lineMates.append(neighbourCell)
+                                elif diffrentIndexes == wallNeighbors:
+                                    cell.wallMates.append(neighbourCell)
+
+
+    ### --- simulation of world --- ###
+    def simulateWorld(self):
+
+        for i in range(self.numberOfIterations): # number of iteration
+            for l in range(self.layers):
+                for r in range(self.rows):
+                    for c in range(self.cols):
+
+                        cell = self.cellsList[l][r][c]  # single cell    
+                        cell.stateChanged = False # reset change info
+                        
+                        self.findOutStateOfCell(cell) # find out new state of cell 
+                        
+            for ll in range(self.layers):
+                for rr in range(self.rows): # loops to update states of all cells at once
+                    for cc in range(self.cols):
+                        cell = self.cellsList[ll][rr][cc]  # single cell
+                        if cell.stateChanged == True:
+                            cell.myState = cell.newState # update cell.state of cell
+                            
+                            
+            print(self.countCellsInSpecificState())
             self.printWorld()
         
+    def printWorld(self):
+        print("")
+        for i in self.cellsList:
+            print("layer")
+            for j in i:
+                print(j)
+            
+    ### --- counting the cells in particular state on the grid --- ###
+    def countCellsInSpecificState(self):
+        stateCounter = [0, 0, 0, 0] # H, I1, I2, D
+        for l in range(self.layers):
+            for r in range(self.rows):
+                for c in range(self.cols):
+                    cell = self.cellsList[l][r][c]
+                    stateCounter[cell.myState] =  stateCounter[cell.myState] + 1
+    
+        return stateCounter
 
-    # change the creation of the world
-
-
+    ### --- saving the results of the simulation to the .txt file --- ####
+    def saveResultToFile(self):
+        pass
+    ### --- saving the coordinates of initial Infected1 cells to .txt file --- ###
+    def saveInitialCoordinatesI1Cells(self):
+        pass

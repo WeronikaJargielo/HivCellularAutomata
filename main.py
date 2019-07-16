@@ -1,9 +1,10 @@
 from classes.World import *
 from classes.Cell import *
+import OpenGL
+import pygame
 
 if __name__ == '__main__':
-    myWolrd = World(3,3,1,4)
-    myWolrd.createWorld()
+    myWolrd = World(rows = 3, cols = 3, layers = 3, numberOfIterations = 5)
     myWolrd.printWorld()
     myWolrd.simulateWorld()
 

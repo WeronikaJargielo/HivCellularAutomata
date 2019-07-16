@@ -1,44 +1,44 @@
-class Cell():
-    
-    def __init__(self,**kwargs): # state, myX, myY, aliveMates, deadMates
+class Cell:
+
+    # kwargs.get('nameOfParametr', defaultValue)
+    ### --- constructor of class Cell --- ###
+    def __init__(self,**kwargs): 
        
-        self.myState = kwargs.get('state', 0)  # state of the cell
-        # kwargs.get('nameOfParametr', defaultValue)
-        self.myX = kwargs.get('myX', -1) # cordinates of cell
+        ### --- cordinates and basic parametrs of the cell --- ###
+        
+        self.myX = kwargs.get('myX', -1) 
         self.myY = kwargs.get('myY', -1)  
-        self.newState = self.myState
-        self.stateChange = False
+        self.myZ = kwargs.get('myZ', -1)
 
-        i = self.myX
-        j = self.myY
-        self.allMates = [] # list of list of indexes of all mates  
-        self.deadMates = -1 # number of dead neighbours
-        self.aliveMates = -1 # number of alive neighbours
+        self.myState = 0 # at the beginning all cells are healthy
+        self.newState = self.myState # newState is to update states of cells at the same time
+        self.stateChanged = False
 
-        # rules of game
-        self.fromDeadToAlive = 3
-        self.stayAliveLow = 2
-        self.stayAliveHigh = 3 # in other situations cell die 
+        self.numberOfI2Iterations = 0  # only infected cell type 2 
 
-    def howManyDeadMates(self, listOfCellMatesStates):
-        self.deadMates =  listOfCellMatesStates.count(0) # 0 means dead
+        ### --- cell's neighbors --- ###
+        self.wallMates = [] # list of the cell's neighbors which directly contact with the cell
+        self.lineMates = [] # list of the cell's neighbors which touch the cell by line 
+        self.pointMates = [] # list of the cell's neighbors which touch the cell by point (in the corners)
 
-    def howManyAliveMates(self, listOfCellMatesStates):
-        self.aliveMates = listOfCellMatesStates.count(1) # 1 means alive
+        ### --- rules of game --- ###
+        # Healthy Cell --> Infected type 1 (one of the rules) -> fromWhatTOWhat_whichStateCounts_whichTypeOfNeighbor
+        self.healthyTOI1_I1_1N = 1 # min. 1 I1 cell
+        self.healthyTOI1_I2_1N = 5 # min. 5 I2 cell
+        self.healthyTOI1_I2_2N = 9 # min. 9 I2 cell
+        self.healthyTOI1_I2_3N = 4 # min. 4 I2 cell
+        # I1 --> I2 (next iteration)
+        # I2 --> D (after next 2 iteration)
+        # D --> I1 (with probability of infection)
+        # D --> H (with probability of replenision - probability of infection)
 
-    def findOutMyState(self, listOfCellMatesStates): # getting an update on the state
-        self.howManyAliveMates(listOfCellMatesStates) #  counting how many alive neighbour has
-        self.howManyDeadMates(listOfCellMatesStates) #  counting how many dead neighbour has
-        if self.myState == 0:
-            if self.aliveMates == self.fromDeadToAlive:
-                self.newState = 1
-                self.stateChange = True
-        elif self.myState == 1:
-            if (self.aliveMates < self.stayAliveLow or self.aliveMates >  self.stayAliveHigh):
-                self.newState = 0
-                self.stateChange = True
-        else:
-            self.stateChange = False
+
+    ### --- counting number of cell' neighbors in specific state --- ###
+    def matesInSpecificState(self,listOfCell, specificState):
+        states = [] # list of cell's neighbors' states
+        for c in listOfCell:
+            states.append(c.myState)
+        return states.count(specificState)
 
     def __repr__(self):
         return str(self.myState)
