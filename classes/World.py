@@ -37,7 +37,7 @@ class World:
    
         self.cellsList = [] 
         self.createWorld() # creation of 3D grid of cells
-        self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
+        # self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
         self.setCellsMates() # setting neighbours of each cell
     # zapisanie ich indeksów do pliku !!!
 
@@ -100,7 +100,8 @@ class World:
         elif cell.myState == self.infected2:
             if cell.numberOfI2Iterations == self.numberOfIterationsInI2State:
                 cell.newState = self.dead
-                # cell.numberOfI2Iterations = 0 bo nie potrzebuje
+                # cell.numberOfI2Iterations = 0  does not need, because setting cell.numberOfI2Iterations = 1 in block I1 -> I2
+                # before cell comes to I2 state it needs to come through I1 state
                 cell.stateChanged = True
             else:
                 cell.numberOfI2Iterations = cell.numberOfI2Iterations + 1
