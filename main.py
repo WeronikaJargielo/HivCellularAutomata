@@ -4,8 +4,14 @@ import OpenGL
 import pygame
 
 if __name__ == '__main__':
-    myWolrd = World(rows = 3, cols = 3, layers = 3, numberOfIterations = 5)
-    myWolrd.printWorld()
-    myWolrd.simulateWorld()
+	cellsNumberInAxis = 50
+	numberOfIterations = 10
+	myWolrd = World(rows = cellsNumberInAxis,
+					cols = cellsNumberInAxis,
+					layers = cellsNumberInAxis,
+					numberOfIterations = numberOfIterations,
+					numberOfSimulation = 1)
+	# myWolrd.printWorld()
+	myWolrd.simulateWorld()
 
-    #comment
+	#comment
