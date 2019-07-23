@@ -2,12 +2,12 @@ class Cell:
 
 	# kwargs.get('nameOfParametr', defaultValue)
 	### --- constructor of class Cell --- ###
-	def __init__(self,**kwargs): 
+	def __init__(self,**kwargs):
 	   
 		### --- cordinates and basic parametrs of the cell --- ###
 		
-		self.myX = kwargs.get('myX', -1) 
-		self.myY = kwargs.get('myY', -1)  
+		self.myX = kwargs.get('myX', -1)
+		self.myY = kwargs.get('myY', -1)
 		self.myZ = kwargs.get('myZ', -1)
 
 		self.myState = 0 # at the beginning all cells are healthy

@@ -1,8 +1,10 @@
 from classes.Cell import *
 from classes.Probability import *
-from classes.Visualisation import *
+# from classes.Visualisation import *
 from classes.VisualisationVol2 import *
 import random
+from time import sleep
+from _thread import start_new_thread
 
 class World:
 	### --- constructor of class World --- ###
@@ -10,11 +12,11 @@ class World:
 	def __init__(self,**kwargs):
 
 		### --- simulation parametrs --- ###
-		self.rows =kwargs.get('rows', 100) # numbers of rows - x
+		self.rows = kwargs.get('rows', 100) # numbers of rows - x
 		self.cols = kwargs.get('cols', 100) # numbers of cols - y
 		self.layers = kwargs.get('layers', 100) # numbers of layers - z
 		self.numberOfSimulation = kwargs.get('numberOfSimiulation', -1) # need in filename duriing saving to file
-		self.dimension = self.rows * self.cols * self.layers # dimention of whole grid
+		self.dimension = self.rows * self.cols * self.layers # dimension of whole grid
 		self.numberOfIterations = kwargs.get('numberOfIterations', 30) # numbers of iterations of simulation
 		
 		### --- states --- ###
@@ -46,7 +48,6 @@ class World:
 		self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
 		self.setCellsMates() # setting neighbours of each cell
 	
-
 
 	### --- creation of the world --- ###
 	def createWorld(self): # creates the whole grid of cells
@@ -167,8 +168,17 @@ class World:
 	def simulateWorld(self):
 		# visualisation = Visualisation(cellsNumberInAxis = self.rows)
 		visualisation = VisualisationVol2(cellsNumberInAxis = self.rows)
-		# visualisation.init()
+		
+		try:
+			start_new_thread(self.performSimulation, (visualisation, ))
+		except:
+			print("Unable to start thread")
 
+		visualisation.startDisplayingWorld(self.cellsList)
+
+
+	def performSimulation(self, visualisation):
+		sleep(1)
 		for i in range(self.numberOfIterations): # number of iteration
 			for l in range(self.layers):
 				for r in range(self.rows):
@@ -177,7 +187,7 @@ class World:
 						cell = self.cellsList[l][r][c]  # single cell	
 						cell.stateChanged = False # reset change info
 						
-						self.findOutStateOfCell(cell) # find out new state of cell 
+						self.findOutStateOfCell(cell) # find out new state of cell
 						
 			for ll in range(self.layers):
 				for rr in range(self.rows): # loops to update states of all cells at once
@@ -185,15 +195,10 @@ class World:
 						cell = self.cellsList[ll][rr][cc]  # single cell
 						if cell.stateChanged == True:
 							cell.myState = cell.newState # update cell.state of cell
+							visualisation.refreshDisplay()
 
-			# visualisation.displayWorld(self.cellsList)  
-			
-			visualisation.main(self.cellsList) 
-		
 			print(self.countCellsInSpecificState())
-			# self.printWorld()
-
-		# visualisation.close()
+			sleep(1)
 
 		
 	def printWorld(self):

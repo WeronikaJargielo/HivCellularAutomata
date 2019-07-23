@@ -1,6 +1,7 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+from time import sleep
 
 class VisualisationVol2():
 
@@ -47,11 +48,30 @@ class VisualisationVol2():
 				(-self.maxLenSideCube, self.maxLenSideCube, self.maxLenSideCube)
 			)
 
+		cellX = 0; cellY = 0; cellZ = 0; L = 0; d = 0
+		self.verticiesSmallCube = [
+			[-L + (cellX + 1) * d, 	-L + (cellY * d),	 	-L + (cellZ * d)],
+			[-L + (cellX + 1) * d, 	-L + (cellY + 1) * d, 	-L + (cellZ * d)],
+			[-L + (cellX * d),	 	-L + (cellY + 1) * d, 	-L + (cellZ * d)],
+			[-L + (cellX * d),	 	-L + (cellY * d),	 	-L + (cellZ * d)],
+			[-L + (cellX + 1) * d, 	-L + (cellY * d),	 	-L + (cellZ + 1) * d],
+			[-L + (cellX + 1) * d, 	-L + (cellY + 1) * d, 	-L + (cellZ + 1) * d],
+			[-L + (cellX * d),	 	-L + (cellY * d),	 	-L + (cellZ + 1) * d],
+			[-L + (cellX * d),	 	-L + (cellY + 1) * d, 	-L + (cellZ + 1) * d]
+		]
+
 		# have no fucking idea what are these
-		self.rtri  = 0.0                
-		self.rquad = 2.0
+		self.rtri  = 0.0	# rotating speed
 		
-	def InitGL(self):                
+
+	def InitGL(self):
+		
+		glutInit()
+		glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+		glutInitWindowSize(self.windowWidth, self.windowHeight)
+		glutInitWindowPosition(0, 0)
+		glutCreateWindow("Simulation Of Hiv Infection")
+
 		glClearColor(0, 0, 0, 1) # set background colour    
 		glClearDepth(1.0)                   
 		glDepthFunc(GL_LESS)                
@@ -63,12 +83,12 @@ class VisualisationVol2():
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()                    
 											
-		gluPerspective(45, float(self.windowWidth)/float(self.windowHeight), 0.1, 100.0)
+		gluPerspective(120, float(self.windowWidth)/float(self.windowHeight), 0.1, 100.0)
 
 		glMatrixMode(GL_MODELVIEW)
 
 
-	def ReSizeGLScene(self):
+	def ReSizeGLScene(self, Width, Height):
 		if self.windowHeight == 0:                       
 			self.windowHeight = 1
 
@@ -78,22 +98,29 @@ class VisualisationVol2():
 		gluPerspective(45.0, float(self.windowWidth)/float(self.windowHeight), 0.1, 100.0)
 		glMatrixMode(GL_MODELVIEW)
 
+
+	# def idle(self):
+	# 	glLoadIdentity()
+	# 	glTranslatef(0.0, 0.0, -4 * self.maxLenSideCube)
+	# 	glRotatef(1, 0, 1, 0)
+	# 	print("idle working")
+	# 	sleep(1)
+
+
 	def drawSmallCube(self, cellX, cellY, cellZ, state):
 		L = self.maxLenSideCube # do skrocenia zapisu
 		d = self.delta 
 
-		verticies = [
-			[-L + (cellX + 1) * d, 	-L + (cellY * d),	 	-L + (cellZ * d)],
-			[-L + (cellX + 1) * d, 	-L + (cellY + 1) * d, 	-L + (cellZ * d)],
-			[-L + (cellX * d),	 	-L + (cellY + 1) * d, 	-L + (cellZ * d)],
-			[-L + (cellX * d),	 	-L + (cellY * d),	 	-L + (cellZ * d)],
-			[-L + (cellX + 1) * d, 	-L + (cellY * d),	 	-L + (cellZ + 1) * d],
-			[-L + (cellX + 1) * d, 	-L + (cellY + 1) * d, 	-L + (cellZ + 1) * d],
-			[-L + (cellX * d),	 	-L + (cellY * d),	 	-L + (cellZ + 1) * d],
-			[-L + (cellX * d),	 	-L + (cellY + 1) * d, 	-L + (cellZ + 1) * d]
-		]
+		self.verticiesSmallCube[0] = [-L + (cellX + 1) * d, 	-L + (cellY * d),	 	-L + (cellZ * d)]
+		self.verticiesSmallCube[1] = [-L + (cellX + 1) * d, 	-L + (cellY + 1) * d, 	-L + (cellZ * d)],
+		self.verticiesSmallCube[2] = [-L + (cellX * d),	 	-L + (cellY + 1) * d, 	-L + (cellZ * d)],
+		self.verticiesSmallCube[3] = [-L + (cellX * d),	 	-L + (cellY * d),	 	-L + (cellZ * d)],
+		self.verticiesSmallCube[4] = [-L + (cellX + 1) * d, 	-L + (cellY * d),	 	-L + (cellZ + 1) * d],
+		self.verticiesSmallCube[5] = [-L + (cellX + 1) * d, 	-L + (cellY + 1) * d, 	-L + (cellZ + 1) * d],
+		self.verticiesSmallCube[6] = [-L + (cellX * d),	 	-L + (cellY * d),	 	-L + (cellZ + 1) * d],
+		self.verticiesSmallCube[7] = [-L + (cellX * d),	 	-L + (cellY + 1) * d, 	-L + (cellZ + 1) * d]
 		
-		self.drawCube(verticies, self.edges, self.colList[state])
+		self.drawCube(self.verticiesSmallCube, self.edges, self.colList[state])
 
 
 	def drawBigCube(self):
@@ -102,24 +129,18 @@ class VisualisationVol2():
 
 	def drawCube(self, verticies, edges, color):
 		glLoadIdentity()
-		glTranslatef(0.0,0.0,-5.0)        
-		glRotatef(1, 0, 1, 0)
-
-
+		glTranslatef(0.0, 0.0, -4 * self.maxLenSideCube)
+		glRotatef(self.rtri, 0, 1, 0)
 		glBegin(GL_LINES)
 		
-		glColor4ubv(color) 
+		glColor4ubv(color)
 		for edge in edges:
 			for vertex in edge:
 				glVertex3fv(verticies[vertex])
 		glEnd()
 
-	 
 
 	def displayWorld(self, cellsList):
-		# glRotatef(1, 0, 1, 0)
-		# glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)    
 
 		self.drawBigCube()
@@ -130,29 +151,24 @@ class VisualisationVol2():
 					if cell.myState != 0:
 						self.drawSmallCube(cell.myX, cell.myY, cell.myZ, cell.myState)
 
-		self.rtri  = self.rtri + 0.2                  
-		self.rquad = self.rquad - 0.15   
+		self.rtri  = self.rtri + 2
 
 		glutSwapBuffers()
 
-		# pygame.display.flip()
-		# pygame.time.wait(10)
-		
+		print("displaying world")
 	
-	def main(self, cellsList):
-		glutInit()
-		glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-		glutInitWindowSize(self.windowWidth, self.windowHeight)
-		glutInitWindowPosition(0, 0)
-		glutCreateWindow("Simulation Of Hiv Infection")
-		
-		myfunct = lambda : self.displayWorld(cellsList)
+	
+	def startDisplayingWorld(self, cellsList):
+		displayFuncHandle = lambda : self.displayWorld(cellsList)	# set display function
 
-		glutDisplayFunc(myfunct)
-		glutIdleFunc(self.displayWorld(cellsList))
-		glutReshapeFunc(self.ReSizeGLScene())
-		# glutKeyboardFunc(keyPressed)
 		self.InitGL()
+
+		glutDisplayFunc(displayFuncHandle)
+		# glutIdleFunc(self.idle)
+		glutReshapeFunc(self.ReSizeGLScene)
+		# glutKeyboardFunc(keyPressed)
+		
 		glutMainLoop()
-		print("Press any key to exit")
-	
+
+	def refreshDisplay(self):
+		glutPostRedisplay()
