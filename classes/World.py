@@ -1,10 +1,11 @@
 from classes.Cell import *
 from classes.Probability import *
-# from classes.Visualisation import *
-from classes.VisualisationVol2 import *
+from classes.Visualisation import *
 import random
-from time import sleep
+from time import sleep, time
 from _thread import start_new_thread
+from threading import Semaphore, Thread
+
 
 class World:
 	### --- constructor of class World --- ###
@@ -47,7 +48,18 @@ class World:
 		self.createWorld() # creation of 3D grid of cells
 		self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
 		self.setCellsMates() # setting neighbours of each cell
-	
+
+		self.visualise = kwargs.get('visualise', True) # should the simulation be visualised
+
+		
+		self.displaySem = Semaphore() # semaphore for displaying (needed if visualise)
+		self.simSem = Semaphore() # semaphore for simulating (needed if visualise)
+		
+		self.cellsListToDisplay = [] 	# list of cells that should be displayed in this iteration
+		self.cellsListToDisplay2 = []	# list of list of cells is specific state that should be displayed in this iteration
+										# [0] - Infected1
+										# [1] - Infected2
+										# [2] - Dead
 
 	### --- creation of the world --- ###
 	def createWorld(self): # creates the whole grid of cells
@@ -130,14 +142,20 @@ class World:
 	### --- setting cell's neighbours --- ###
 	def setCellsMates(self):
 
-		wallNeighbors = 1
+		wallNeighbors = 1			# number of different indices for specific neighbours
 		lineNeighbors = 2
 		pointNeighbors = 3
+
+		xMax = self.rows - 1		# max cells indices
+		yMax = self.cols - 1
+		zMax = self.layers - 1
 
 		for l in range(self.layers):
 			for r in range(self.rows):
 				for c in range(self.cols):
-					cell = self.cellsList[l][r][c] # specific cell to 
+					cell = self.cellsList[l][r][c] # middle cell
+
+					cell.isBorderCell = cell.checkIfBorder(xMax, yMax, zMax)
 
 					lRange = list(range(l-1, l+2))  # create range [first, last)
 					rRange = list(range(r-1, r+2))
@@ -155,50 +173,87 @@ class World:
 						for rr in rRange:
 							for cc in cRange:
 								neighbourCell = self.cellsList[ll][rr][cc] 
-								diffrentIndexes = (ll != cell.myZ) + (rr != cell.myX) + (cc != cell.myY)
-								if diffrentIndexes == pointNeighbors:
+								differentIndexes = (ll != cell.myZ) + (rr != cell.myX) + (cc != cell.myY)
+								if differentIndexes == pointNeighbors:
 									cell.pointMates.append(neighbourCell)
-								elif diffrentIndexes == lineNeighbors:
+								elif differentIndexes == lineNeighbors:
 									cell.lineMates.append(neighbourCell)
-								elif diffrentIndexes == wallNeighbors:
+								elif differentIndexes == wallNeighbors:
 									cell.wallMates.append(neighbourCell)
+									# if cell.checkIfNeighbouring(neighbourCell):
+									# 	cell.displayWallMates.append(neighbourCell)
 
 
 	### --- simulation of world --- ###
 	def simulateWorld(self):
-		# visualisation = Visualisation(cellsNumberInAxis = self.rows)
-		visualisation = VisualisationVol2(cellsNumberInAxis = self.rows)
+		visualisation = Visualisation(displaySem = self.displaySem,
+										simSem = self.simSem,
+										cellsNumberInAxis = self.rows,
+										cellsList = self.cellsList,
+										cellsListToDisplay = self.cellsListToDisplay,
+										cellsListToDisplay2 = self.cellsListToDisplay2
+										)
 		
+
+		# self.performSimulation(visualisation)
+
 		try:
-			start_new_thread(self.performSimulation, (visualisation, ))
+			thread = Thread(target = self.performSimulation, args = (visualisation, ))
+			thread.start()
 		except:
 			print("Unable to start thread")
 
-		visualisation.startDisplayingWorld(self.cellsList)
+		visualisation.startDisplayingWorld()
 
 
 	def performSimulation(self, visualisation):
-		sleep(1)
+		sleep(1)	# wait for display initialization
+
 		for i in range(self.numberOfIterations): # number of iteration
-			for l in range(self.layers):
-				for r in range(self.rows):
-					for c in range(self.cols):
+			# start_time = time()
 
-						cell = self.cellsList[l][r][c]  # single cell	
-						cell.stateChanged = False # reset change info
-						
-						self.findOutStateOfCell(cell) # find out new state of cell
-						
-			for ll in range(self.layers):
-				for rr in range(self.rows): # loops to update states of all cells at once
-					for cc in range(self.cols):
-						cell = self.cellsList[ll][rr][cc]  # single cell
-						if cell.stateChanged == True:
+			self.simSem.acquire()
+
+			try:
+				loopTime = time()
+				
+				self.cellsListToDisplay = []
+				self.cellsListToDisplay2 = [[], [], []]
+
+				for l in range(self.layers):
+					for r in range(self.rows):
+						for c in range(self.cols):
+
+							cell = self.cellsList[l][r][c]  # single cell	
+							cell.stateChanged = False # reset change info
+							
+							self.findOutStateOfCell(cell) # find out new state of cell
+							
+				for ll in range(self.layers):
+					for rr in range(self.rows): # loops to update states of all cells at once
+						for cc in range(self.cols):
+							cell = self.cellsList[ll][rr][cc]  # single cell
+							# if cell.stateChanged:
 							cell.myState = cell.newState # update cell.state of cell
-							visualisation.refreshDisplay()
+							
+							if cell.myState:			# dont draw healthy cells
+								self.cellsListToDisplay.append(cell)
+								self.cellsListToDisplay2[cell.myState - 1].append(cell)
 
-			print(self.countCellsInSpecificState())
-			sleep(1)
+
+
+				loopTime = time() - loopTime
+				# print(len(self.cellsListToDisplay))
+				print(i, " loop time: ", loopTime)
+
+				# print(self.countCellsInSpecificState())
+				visualisation.refreshDisplay(self.cellsListToDisplay, self.cellsListToDisplay2)
+			
+			finally:
+				self.displaySem.release()
+
+			# end_time = time()
+			# print('whole step time: ', end_time - start_time)
 
 		
 	def printWorld(self):
