@@ -21,17 +21,6 @@ class Cell:
 		self.lineMates = [] # list of the cell's neighbors which touch the cell by line 
 		self.pointMates = [] # list of the cell's neighbors which touch the cell by point (in the corners)
 
-		### --- rules of game --- ###
-		# Healthy Cell --> Infected type 1 (one of the rules) -> fromWhatTOWhat_whichStateCounts_whichTypeOfNeighbor
-		self.healthyTOI1_I1_1N = 1 # min. 1 I1 cell
-		self.healthyTOI1_I2_1N = 5 # min. 5 I2 cell
-		self.healthyTOI1_I2_2N = 9 # min. 9 I2 cell
-		self.healthyTOI1_I2_3N = 4 # min. 4 I2 cell
-		# I1 --> I2 (next iteration)
-		# I2 --> D (after next 2 iteration)
-		# D --> I1 (with probability of infection)
-		# D --> H (with probability of replenision - probability of infection)
-
 
 	### --- counting number of cell' neighbors in specific state --- ###
 	def matesInSpecificState(self,listOfCell, specificState):
