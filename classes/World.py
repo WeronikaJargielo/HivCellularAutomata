@@ -5,7 +5,7 @@ import random
 from time import sleep, time
 from _thread import start_new_thread
 from threading import Semaphore, Thread
-
+from os import path # library to operate on files
 
 class World:
 	### --- constructor of class World --- ###
@@ -20,38 +20,67 @@ class World:
 		self.dimension = self.rows * self.cols * self.layers # dimension of whole grid
 		self.numberOfIterations = kwargs.get('numberOfIterations', 30) # numbers of iterations of simulation
 		
+
+		self.visualisation_ON = kwargs.get('visualisation_ON', False) # if visualisation should be displayed
+		self.saveSimulation_ON = kwargs.get('saveSimulation_ON', False) # if simulation should be save to TXT file
+		self.nameOfFile = kwargs.get('nameOfFile', str(random.randint(0,100))) # name of output file
+		self.nameOfDictForResults = 'results_Of_Simulation' # name of dictionary where will be stored result of simulation
+
+		### --- creating dictionaries for the results --- ###
+		if (self.saveSimulation_ON):
+			if (not path.isdir(self.nameOfDictForResults)):
+				os.mkdir(self.nameOfDictForResults)
+			self.initializeFileToSaveResult(self.nameOfFile)	
+		
 		### --- states --- ###
 		self.healthy = 0
 		self.infected1 = 1
 		self.infected2 = 2
 		self.dead = 3
-		
-		self.numberOfIterationsInI2State = 2
-		
+
 		### --- Initial coditions --- ###
 		# the probability/percentage of initial healthy cell infected by HIV 
 		self.pInitialHIV = kwargs.get('pInitialHIV', 0.0005) # from Alive to I1
 
-		# probability that a DEAD cell is replenished by an HEALTHY cell 
-		self.pReplenision = Probability(nominator = 99 , denominator = 100) # from Dead to Alive
+		# initial number of cells of type infected 1
+		self.numberOfI1Cell = kwargs.get('numberOfInfected_1_Cell', (self.dimension * self.pInitialHIV)) 
+		
+		### --- rules --- ###
 
+		# RULES 1 FOR: Healthy Cell --> Infected 1 Cell
+		self.numI1Cell_WallMates = kwargs.get('numI1Cell_WallMates', 1)  
+		self.numI1Cell_LineMates = kwargs.get('numI1Cell_LineMates', 1)
+
+		self.numI2Cell_WallMates = kwargs.get('numI2Cell_WallMates', 5) 
+		self.numI2Cell_LineMates = kwargs.get('numI2Cell_LineMates', 9)
+		self.numI2Cell_PointMates = kwargs.get('numI2Cell_PointMates', 4)
+
+		# RULES 2 FOR: Infected 1 Cell --> Infected 2 Cell - in the next step interation
+
+		# RULES 3 FOR: Infected 2 Cell --> Dead Cell - after particular numbers of interation in state I2
+		self.numberOfIterationsInI2State = kwargs.get('numberOfIterationsInI2State', 2)
+		
+		# RULES 4 FOR: 
+		# 				Dead Cell --> Infected 1 Cell with propability of infection - P_inf
+		# 				Dead Cell --> Healthy Cell with propability of replenision - P_rep
+
+		# probability that a DEAD cell is replenished by an HEALTHY cell 
+		self.pRep = kwargs.get('pRep', [99, 100])
+		self.pReplenision = Probability(nominator = self.pRep[0], denominator = self.pRep[1])
+
+		
 		# probability that a DEAD cell becomes a HEALTHY cell
-		self.pInfection = Probability(nominator = 974 , denominator = 100000000) # from Dead to I1
+		self.pInf = kwargs.get('pInf', [974, 100000000])
+		self.pInfection = Probability(nominator = self.pInf[0] , denominator = self.pInf[1]) 
 
 		# make common denominator
 		self.pInfection.commonDenominator(self.pReplenision)
-
-		# initial number of cells of type infected 1
-		self.numberOfI1Cell = kwargs.get('numberOfInfected_1_Cell', (self.dimension * self.pInitialHIV)) 
    
 		self.cellsList = [] 
 		self.createWorld() # creation of 3D grid of cells
 		self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
 		self.setCellsMates() # setting neighbours of each cell
 
-		self.visualise = kwargs.get('visualise', True) # should the simulation be visualised
-
-		
 		self.displaySem = Semaphore() # semaphore for displaying (needed if visualise)
 		self.simSem = Semaphore() # semaphore for simulating (needed if visualise)
 		
@@ -96,12 +125,12 @@ class World:
 		# HEALTHY --> INFECTED 1
 		if cell.myState == self.healthy: 
 			
-			if (	cell.matesInSpecificState(cell.wallMates, self.infected1) >= 1 # I1 cell, wall neighborhood
-				 or cell.matesInSpecificState(cell.lineMates, self.infected1) >= 1 # I1 cell, line neighborhood
+			if (	cell.matesInSpecificState(cell.wallMates, self.infected1) >= self.numI1Cell_WallMates # I1 cell, wall neighborhood
+				 or cell.matesInSpecificState(cell.lineMates, self.infected1) >= self.numI1Cell_LineMates # I1 cell, line neighborhood
 				 or (
-						cell.matesInSpecificState(cell.wallMates, self.infected2) >= 5 # I2 cell, wall neighborhood
-					and cell.matesInSpecificState(cell.lineMates, self.infected2) >= 9 # I2 cell, line neighborhood
-					and cell.matesInSpecificState(cell.pointMates, self.infected2) >= 4 # I2 cell, point neighborhood
+						cell.matesInSpecificState(cell.wallMates, self.infected2) >= self.numI2Cell_WallMates # I2 cell, wall neighborhood
+					and cell.matesInSpecificState(cell.lineMates, self.infected2) >= self.numI2Cell_LineMates # I2 cell, line neighborhood
+					and cell.matesInSpecificState(cell.pointMates, self.infected2) >= self.numI2Cell_PointMates # I2 cell, point neighborhood
 					)
 				):
 				
@@ -200,12 +229,15 @@ class World:
 
 		visualisation.startDisplayingWorld()
 
-
 	def performSimulation(self, visualisation):
 		sleep(1)	# wait for display initialization
 
 		for i in range(self.numberOfIterations): # number of iteration
-			# start_time = time()
+			print(self.countCellsInSpecificState())
+
+
+			if (self.saveSimulation_ON):
+				self.saveResultToFile(self.nameOfFile, i, self.countCellsInSpecificState())
 
 			self.simSem.acquire()
 
@@ -236,17 +268,13 @@ class World:
 
 
 				loopTime = time() - loopTime
-				# print(len(self.cellsListToDisplay))
 				print(i, " loop time: ", loopTime)
 
-				# print(self.countCellsInSpecificState())
 				visualisation.refreshDisplay(self.cellsListToDisplay)
 			
 			finally:
 				self.displaySem.release()
 				pass
-			# end_time = time()
-			# print('whole step time: ', end_time - start_time)
 
 		
 	def printWorld(self):
@@ -269,19 +297,21 @@ class World:
 		return stateCounter
 
 
-	### --- saving the results of the simulation to the .txt file --- ####
-	def saveResultToFile(self):
-		filename = "resultOfSimulation" + self.numberOfSimulation + ".txt"
-		pass
-
-		
-	### --- saving the coordinates of initial Infected1 cells to .txt file --- ###
-	def saveInitialCoordinatesI1Cells(self):
-		filename = "initialCoordinatesCellI1" + self.numberOfSimulation + ".txt"
-		pass
+	### --- saving the results of sigle iteration of the simulation to the .txt file --- ####
+	def saveResultToFile(self, nameOfFile, iteration, listOfCountedCellEachState):
+		filename = self.nameOfDictForResults + '/' + nameOfFile + '.txt'
+		file = open(filename, "a") # opening the file to save simulation
+		file.write('\n' + str(iteration) + '\t')
+		for state in listOfCountedCellEachState:
+			file.write(str(state) + '\t')
+		file.close()
 
 
-	### --- saving the whole simiulation to file: number of iterations, size of World and state of each cell in each iteration --- ###
-	def saveWHileSimiulationToFile(self):
-		filename = "simulation" + self.numberOfSimulation + ".txt"
-		pass
+	### --- initializing .txt file for saving results of simiulation--- ####
+	def initializeFileToSaveResult(self, nameOfFile):
+		filename = self.nameOfDictForResults + '/' + nameOfFile + '.txt'
+		file = open(filename, "a") # opening the file to save simulation
+		colNames = ['Iteration','Healthy', 'Infected_1', 'Infected_2', 'Dead']
+		for name in colNames:
+			file.write(name+'\t')
+		file.close()
