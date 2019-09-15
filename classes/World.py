@@ -55,8 +55,7 @@ class World:
 		self.displaySem = Semaphore() # semaphore for displaying (needed if visualise)
 		self.simSem = Semaphore() # semaphore for simulating (needed if visualise)
 		
-		self.cellsListToDisplay = [] 	# list of cells that should be displayed in this iteration
-		self.cellsListToDisplay2 = []	# list of list of cells is specific state that should be displayed in this iteration
+		self.cellsListToDisplay = []	# list of list of cells is specific state that should be displayed in this iteration
 										# [0] - Infected1
 										# [1] - Infected2
 										# [2] - Dead
@@ -180,9 +179,6 @@ class World:
 									cell.lineMates.append(neighbourCell)
 								elif differentIndexes == wallNeighbors:
 									cell.wallMates.append(neighbourCell)
-									# if cell.checkIfNeighbouring(neighbourCell):
-									# 	cell.displayWallMates.append(neighbourCell)
-
 
 	### --- simulation of world --- ###
 	def simulateWorld(self):
@@ -190,8 +186,7 @@ class World:
 										simSem = self.simSem,
 										cellsNumberInAxis = self.rows,
 										cellsList = self.cellsList,
-										cellsListToDisplay = self.cellsListToDisplay,
-										cellsListToDisplay2 = self.cellsListToDisplay2
+										cellsListToDisplay = self.cellsListToDisplay
 										)
 		
 
@@ -217,8 +212,7 @@ class World:
 			try:
 				loopTime = time()
 				
-				self.cellsListToDisplay = []
-				self.cellsListToDisplay2 = [[], [], []]
+				self.cellsListToDisplay = [[], [], []]
 
 				for l in range(self.layers):
 					for r in range(self.rows):
@@ -237,8 +231,7 @@ class World:
 							cell.myState = cell.newState # update cell.state of cell
 							
 							if cell.myState:			# dont draw healthy cells
-								self.cellsListToDisplay.append(cell)
-								self.cellsListToDisplay2[cell.myState - 1].append(cell)
+								self.cellsListToDisplay[cell.myState - 1].append(cell)
 
 
 
@@ -247,11 +240,11 @@ class World:
 				print(i, " loop time: ", loopTime)
 
 				# print(self.countCellsInSpecificState())
-				visualisation.refreshDisplay(self.cellsListToDisplay, self.cellsListToDisplay2)
+				visualisation.refreshDisplay(self.cellsListToDisplay)
 			
 			finally:
 				self.displaySem.release()
-
+				pass
 			# end_time = time()
 			# print('whole step time: ', end_time - start_time)
 
