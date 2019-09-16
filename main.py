@@ -19,10 +19,8 @@ if __name__ == '__main__':
 					layers = cellsNumberInAxis,
 					numberOfIterations = numberOfIterations,
 					numberOfSimulation = 1,
-					visualisation_ON = False,
-					saveSimulation_ON = True,
-					nameOfFile = 'nope')
-	# myWorld.printWorld()
+					visualisation_ON = True,
+					saveSimulation_ON = False,
+					nameOfFile = 'testFile')
+
 	myWorld.simulateWorld()
-	# myWorld.performSimulation()
-	

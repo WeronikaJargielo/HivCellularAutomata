@@ -16,7 +16,7 @@ class World:
 		self.rows = kwargs.get('rows', 100) # numbers of rows - x
 		self.cols = kwargs.get('cols', 100) # numbers of cols - y
 		self.layers = kwargs.get('layers', 100) # numbers of layers - z
-		self.numberOfSimulation = kwargs.get('numberOfSimiulation', -1) # need in filename duriing saving to file
+		self.numberOfSimulation = kwargs.get('numberOfSimiulation', -1) # needed in filename during saving to file
 		self.dimension = self.rows * self.cols * self.layers # dimension of whole grid
 		self.numberOfIterations = kwargs.get('numberOfIterations', 30) # numbers of iterations of simulation
 		
@@ -81,8 +81,9 @@ class World:
 		self.setStateOfIntialI1Cell(self.numberOfI1Cell) # setting the state of I1 cells randomly selected
 		self.setCellsMates() # setting neighbours of each cell
 
-		self.displaySem = Semaphore() # semaphore for displaying (needed if visualise)
-		self.simSem = Semaphore() # semaphore for simulating (needed if visualise)
+		if self.visualisation_ON:
+			self.displaySemaphore = Semaphore()
+			self.simulationSemaphore = Semaphore()
 		
 		self.cellsListToDisplay = []	# list of list of cells is specific state that should be displayed in this iteration
 										# [0] - Infected1
@@ -211,40 +212,38 @@ class World:
 
 	### --- simulation of world --- ###
 	def simulateWorld(self):
-		visualisation = Visualisation(displaySem = self.displaySem,
-										simSem = self.simSem,
-										cellsNumberInAxis = self.rows,
+		if self.visualisation_ON:
+			visualisation = Visualisation(displaySemaphore = self.displaySemaphore,
+										simulationSemaphore = self.simulationSemaphore,
 										cellsList = self.cellsList,
 										cellsListToDisplay = self.cellsListToDisplay
-										)
+									)
+			try:
+				thread = Thread(target = self.calculateWholeSimulation, args = (visualisation, ))
+				thread.start()
+			except:
+				print("Unable to start thread")
+
+			visualisation.startDisplayingWorld()
+		else:
+			self.calculateWholeSimulation(None)
 		
 
-		# self.performSimulation(visualisation)
-
-		try:
-			thread = Thread(target = self.performSimulation, args = (visualisation, ))
-			thread.start()
-		except:
-			print("Unable to start thread")
-
-		visualisation.startDisplayingWorld()
-
-	def performSimulation(self, visualisation):
+	def calculateWholeSimulation(self, visualisation):
 		sleep(1)	# wait for display initialization
 
-		for i in range(self.numberOfIterations): # number of iteration
-			print(self.countCellsInSpecificState())
-
-
-			if (self.saveSimulation_ON):
+		for i in range(self.numberOfIterations):
+			if self.saveSimulation_ON:
 				self.saveResultToFile(self.nameOfFile, i, self.countCellsInSpecificState())
 
-			self.simSem.acquire()
+			if self.visualisation_ON:
+				self.simulationSemaphore.acquire()
 
 			try:
 				loopTime = time()
 				
-				self.cellsListToDisplay = [[], [], []]
+				if self.visualisation_ON:
+					self.cellsListToDisplay = [[], [], []]
 
 				for l in range(self.layers):
 					for r in range(self.rows):
@@ -262,27 +261,18 @@ class World:
 							# if cell.stateChanged:
 							cell.myState = cell.newState # update cell.state of cell
 							
-							if cell.myState:			# dont draw healthy cells
+							if self.visualisation_ON and cell.myState:			# dont draw healthy cells
 								self.cellsListToDisplay[cell.myState - 1].append(cell)
-
-
 
 				loopTime = time() - loopTime
 				print(i, " loop time: ", loopTime)
-
-				visualisation.refreshDisplay(self.cellsListToDisplay)
+				
+				if self.visualisation_ON:
+					visualisation.refreshDisplay(self.cellsListToDisplay)
 			
 			finally:
-				self.displaySem.release()
-				pass
-
-		
-	def printWorld(self):
-		print("")
-		for i in self.cellsList:
-			print("layer")
-			for j in i:
-				print(j)
+				if self.visualisation_ON:
+					self.displaySemaphore.release()
 
 
 	### --- counting the cells in particular state on the grid --- ###

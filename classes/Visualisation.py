@@ -6,11 +6,10 @@ from OpenGL.arrays import vbo
 from time import sleep, time
 from threading import Semaphore
 
-import random
 from array import array
 
 from numpy import array as numpyArray
-from numpy import int32, uint32, concatenate, append
+from numpy import uint32
 
 class Visualisation():
 
@@ -19,71 +18,53 @@ class Visualisation():
 		self.windowWidth = kwargs.get('windowWidth', 800)	# main window's width
 		self.windowHeight = kwargs.get('windowHeight',600)	# main window's height
 
-		self.cellsList = kwargs.get('cellsList', None)					# list of all cells
-		self.cellsInAxis = len(self.cellsList)							# number of little cubes in row
-		self.lenBigCube = kwargs.get('bigCubeLength', 3)				# length of frame cube
-		self.lenSmallCube = self.lenBigCube / self.cellsInAxis			# length of small cubes
+		self.cellsList = kwargs.get('cellsList', None)
+		self.cellsInAxis = len(self.cellsList)
+		self.lenBigCube = kwargs.get('bigCubeLength', 3)
+		self.lenSmallCube = self.lenBigCube / self.cellsInAxis
 
 		self.cellsListToDisplay = kwargs.get('cellsListToDisplay', None)	# reference to cells to display
 
-		# self.timeDelay = kwargs.get('simTimeDelay', 500)
+		self.simulationSemaphore = kwargs.get('simulationSemaphore', None)
+		self.displaySemaphore = kwargs.get('displaySemaphore', None)
 
-		self.simSem = kwargs.get('simSem', None)
-		self.displaySem = kwargs.get('displaySem', None)
+		self.numberOfVertexesPerCube = 8
 
-		self.vertexesPerCube = 24 # number of vertexes needed for drawing one cube
-		self.indexesPerCube = 8
-
-
-		self.xCoefficient = self.indexesPerCube * self.cellsInAxis * self.cellsInAxis	# coefficients needed to find proper vertex position in VBO
-		self.yCoefficient = self.indexesPerCube * self.cellsInAxis
-		self.zCoefficient = self.indexesPerCube
+		self.xCoefficient = self.numberOfVertexesPerCube * self.cellsInAxis * self.cellsInAxis	# coefficients needed to find proper vertex position in VBO
+		self.yCoefficient = self.numberOfVertexesPerCube * self.cellsInAxis
+		self.zCoefficient = self.numberOfVertexesPerCube
 		
-		self.vboId = 0
-
-		self.translateOnX = +self.lenBigCube/4
-		self.translateOnY = -self.lenBigCube/2
-		self.translateOnZ = -3 * self.lenBigCube
+		self.xTranslation = +self.lenBigCube/4
+		self.yTranslation = -self.lenBigCube/2
+		self.zTranslation = -3 * self.lenBigCube
 
 		self.currentRotation = 300.0
 		self.rotatingSpeed = 00.0
 
-		self.colBigCube = (255, 255, 255, 255)	# frame cube color - white, opaque
+		self.colBigCube = [255, 255, 255]
 
-# array colors
-		self.colAInf1 = [ [0.6, 0.6, 0],  	[0.9, 0.9, 0],  [0.9, 0.9, 0], [0.8, 0.8, 0], [0.8, 0.8, 0],  [1, 1, 0],  [0.95, 0.95, 0], [1, 1, 0]]	# arrays with cube colors
-		self.colAInf2 = [ [0.6, 0.3, 0], 	[0.9, 0.5, 0],[0.9, 0.5, 0], [0.8, 0.4, 0], [0.8, 0.4, 0], [1, 0.6, 0], [0.95, 0.55, 0], [1, 0.6, 0]]
-		self.colADead = [ [0.6, 0, 0],  	[0.9, 0, 0],  [0.9, 0, 0],   [0.8, 0, 0],  [0.8, 0, 0],  [1, 0, 0],  [0.95, 0, 0],  [1, 0, 0]]
+		self.colAInf1 = [ [0.6, 0.6, 0], [0.9, 0.9, 0],  [0.9, 0.9, 0], [0.8, 0.8, 0], [0.8, 0.8, 0],  [1, 1, 0],  [0.95, 0.95, 0], [1, 1, 0]]
+		self.colAInf2 = [ [0.6, 0.3, 0], [0.9, 0.5, 0],[0.9, 0.5, 0], [0.8, 0.4, 0], [0.8, 0.4, 0], [1, 0.6, 0], [0.95, 0.55, 0], [1, 0.6, 0]]
+		self.colADead = [ [0.6, 0, 0],   [0.9, 0, 0],  [0.9, 0, 0],   [0.8, 0, 0],  [0.8, 0, 0],  [1, 0, 0],  [0.95, 0, 0],  [1, 0, 0]]
 		self.colAList = [self.colAInf1, self.colAInf2, self.colADead] # enables setColor(self.colAList[cell.state - 1])
 
-# array vertices
-		self.surfacesA = array('B', [						# vertices numbers for all surfaces 
-				0,1,2,3,	# back wall
-				3,2,7,6,	# left wall
-				6,7,5,4,	# front wall
-				4,5,1,0,	# right wall
-				1,5,7,2,	# top wall
-				4,0,3,6		# bottom wall
-			]).tostring()
-
-# long data
 		self.bigCubeEdgesIndexes = array('B', [0,1, 0,3, 0,4, 2,1, 2,3, 2,7, 6,3, 6,4, 6,7, 5,1, 5,4, 5,7]).tobytes()
-		self.numberOfEdgesIndexes = 24
+		self.numberOfEdgesVertexes = 24
+		self.byteStrideBetweenVertexes = 24
+
 		self.verticesBigCubeA = array('f',[				# big cube vertices
 				self.lenBigCube, 	0, 					0,
 				self.lenBigCube, 	self.lenBigCube, 	0,
-				0, 				self.lenBigCube, 	0,
-				0, 				0, 					0,
+				0, 					self.lenBigCube, 	0,
+				0, 					0, 					0,
 				self.lenBigCube, 	0, 					self.lenBigCube,
 				self.lenBigCube, 	self.lenBigCube, 	self.lenBigCube,
-				0, 				0, 					self.lenBigCube,
-				0, 				self.lenBigCube, 	self.lenBigCube
+				0, 					0, 					self.lenBigCube,
+				0, 					self.lenBigCube, 	self.lenBigCube
 			]).tobytes()
-# long data end
 
-		self.byteStrideBetweenVertexes = 24
-		
-		
+		self.cellsSurfacesIndexes = None
+		self.vertexVbos = None
 
 	def InitGL(self):
 		glutInit()
@@ -107,83 +88,60 @@ class Visualisation():
 
 		self.initCubes()
 
-	### --- Creates all cubes vertices as VBO array --- ###
+	### --- Creates all cubes vertices as VBO arrays --- ###
 	def initCubes(self):
-		verticesSmallCube = [				# small cubes vertices
-				[self.lenSmallCube, 0, 					0],
-				[self.lenSmallCube, self.lenSmallCube, 	0],
-				[0, 				self.lenSmallCube, 	0],
-				[0, 				0, 					0],
-				[self.lenSmallCube, 0, 					self.lenSmallCube],
-				[self.lenSmallCube, self.lenSmallCube, 	self.lenSmallCube],
-				[0, 				0, 					self.lenSmallCube],
-				[0, 				self.lenSmallCube, 	self.lenSmallCube]
-			]
+		self.cellsSurfacesIndexes = self.initCellsSurfaces()
+
+		self.vertexVbos = self.initVbos()
+
+	def initVbos(self):
+		vertexVbos = []
+		for colors in self.colAList:
+			vertexVbos.append(self.initVertexVboWithColor(colors))
+		return vertexVbos
+
+	def initVertexVboWithColor(self, vertexesColors):
+		l = self.lenBigCube / self.cellsInAxis # length of small cube
+		verticesSmallCube = [ [l, 0, 0], [l, l, 0], [0, l, 0], [0, 0, 0], [l, 0, l], [l, l, l], [0, 0, l], [0, l, l] ]
 		vertexArray = []
-		vertexArrayInf1 = []
-		vertexArrayInf2 = []
-		vertexArrayDead = []
-		self.cellsIndexes = []
 		for x in range(self.cellsInAxis):
-			xIndexes = []
 			for y in range(self.cellsInAxis):
-				yIndexes = []
 				for z in range(self.cellsInAxis):
 					dx = x * self.lenSmallCube
 					dy = y * self.lenSmallCube
 					dz = z * self.lenSmallCube
 					
-					for vert in verticesSmallCube:
-						vertexArray.append([vert[0] + dx, vert[1] + dy, vert[2] + dz])
-					
-					for vert, color in zip(verticesSmallCube, self.colAInf1):
-						vertexArrayInf1.append([vert[0] + dx, vert[1] + dy, vert[2] + dz])
-						vertexArrayInf1.append(color)
-					for vert, color in zip(verticesSmallCube, self.colAInf2):
-						vertexArrayInf2.append([vert[0] + dx, vert[1] + dy, vert[2] + dz])
-						vertexArrayInf2.append(color)
-					for vert, color in zip(verticesSmallCube, self.colADead):
-						vertexArrayDead.append([vert[0] + dx, vert[1] + dy, vert[2] + dz])
-						vertexArrayDead.append(color)
+					for vertex, color in zip(verticesSmallCube, vertexesColors):
+						vertexArray.append([vertex[0] + dx, vertex[1] + dy, vertex[2] + dz])
+						vertexArray.append(color)
 
-					yIndexes.append(self.initSurfaces(x, y, z))	# needed by 12
-				xIndexes.append(yIndexes)
-			self.cellsIndexes.append(xIndexes)		
+		return vbo.VBO(numpyArray(vertexArray, dtype = 'f'), target = GL_ARRAY_BUFFER, usage = GL_STATIC_DRAW)
+
+	def initCellsSurfaces(self):
+		cellsSurfacesIndexes = []
+		for x in range(self.cellsInAxis):
+			yCellsSurfaces = []
+			for y in range(self.cellsInAxis):
+				zCellsSurfaces = []
+				for z in range(self.cellsInAxis):
+					zCellsSurfaces.append(self.createSurfacesForCell(x, y, z))
+				
+				yCellsSurfaces.append(zCellsSurfaces)
+			
+			cellsSurfacesIndexes.append(yCellsSurfaces)
 		
-		# vertexArray = numpyArray(vertexArray, dtype = 'f')
-		vertexArrayInf1 = numpyArray(vertexArrayInf1, dtype = 'f')
-		vertexArrayInf2 = numpyArray(vertexArrayInf2, dtype = 'f')
-		vertexArrayDead = numpyArray(vertexArrayDead, dtype = 'f')
+		return cellsSurfacesIndexes
 
-		# self.vertexVbo = vbo.VBO(vertexArray, target = GL_ARRAY_BUFFER, usage = GL_STATIC_DRAW)
-		self.vertexVboInf1 = vbo.VBO(vertexArrayInf1, target = GL_ARRAY_BUFFER, usage = GL_STATIC_DRAW)
-		self.vertexVboInf2 = vbo.VBO(vertexArrayInf2, target = GL_ARRAY_BUFFER, usage = GL_STATIC_DRAW)
-		self.vertexVboDead = vbo.VBO(vertexArrayDead, target = GL_ARRAY_BUFFER, usage = GL_STATIC_DRAW)
-		
-		self.vertexVbos = [self.vertexVboInf1, self.vertexVboInf2, self.vertexVboDead]
-
-		# self.vboId = glGenBuffers(1)
-		# glBindBuffer(GL_ARRAY_BUFFER, self.vboId)
-		# glBufferData(GL_ARRAY_BUFFER, self.vertexArray, GL_STATIC_DRAW)
-
-	def initSurfaces(self, x, y, z):
-		beginIndex = x * self.xCoefficient + y * self.yCoefficient + z * self.zCoefficient
+	def createSurfacesForCell(self, x, y, z):
 		surfaces = array('I', [						# vertices numbers for all surfaces 
-				0,1,2,3,	# hontho wall
+				0,1,2,3,	# back wall
 				3,2,7,6,	# left wall
 				6,7,5,4,	# front wall
 				4,5,1,0,	# right wall
 				1,5,7,2,	# top wall
 				4,0,3,6		# bottom wall
 			])
-		# surfaces = numpyArray([						# vertices numbers for all surfaces 
-		# 		0,1,2,3,	# back wall
-		# 		3,2,7,6,	# left wall
-		# 		6,7,5,4,	# front wall
-		# 		4,5,1,0,	# right wall
-		# 		1,5,7,2,	# top wall
-		# 		4,0,3,6		# bottom wall
-		# 	], dtype=uint32)
+		beginIndex = x * self.xCoefficient + y * self.yCoefficient + z * self.zCoefficient
 		for i in range(len(surfaces)):
 			surfaces[i] += beginIndex
 		return surfaces
@@ -200,28 +158,55 @@ class Visualisation():
 
 	def idle(self):
 		self.currentRotation += self.rotatingSpeed
-		glLoadIdentity()
-		glTranslatef(self.translateOnX, self.translateOnY, self.translateOnZ)
-		glRotatef(self.currentRotation, 0, 1, 0)
 		sleep(1)
-		glutPostRedisplay()		# to make it rotate
+
+	
+	def displayWorld(self):			# draw all 
+		self.displaySemaphore.acquire() # take semaphore to display world, so simulation will have to wait
+		try:
+			displayTime = time()
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+			self.drawBigCube()
+
+			glLoadIdentity()
+			glTranslatef(self.xTranslation, self.yTranslation, self.zTranslation)
+			glRotatef(self.currentRotation, 0, 1, 0)
+
+			for cellsInOneState, currentVertexVbo in zip(self.cellsListToDisplay, self.vertexVbos):
+				if cellsInOneState:			# check if list not empty
+
+					indexesToDisplay = array('I', [])
+					for cell in cellsInOneState:
+						if cell.isBorderCell or not all(cell.wallMates):			# if border cell or any neighbour is healthy, print cell
+							indexesToDisplay.extend(self.cellsSurfacesIndexes[cell.myX][cell.myY][cell.myZ])
+					
+					currentVertexVbo.bind()
+					self.drawSmallCubes(indexesToDisplay, currentVertexVbo)
+					currentVertexVbo.unbind()
+
+			glutSwapBuffers()
+			displayTime = time() - displayTime
+			print("display time: ", displayTime)
+	
+		finally:
+			self.simulationSemaphore.release()	# end of displaying world, release semaphore for simulation
 
 	def drawBigCube(self):
 		glLoadIdentity()
-		glTranslatef(self.translateOnX, self.translateOnY, self.translateOnZ)
+		glTranslatef(self.xTranslation, self.yTranslation, self.zTranslation)
 		glRotatef(self.currentRotation, 0, 1, 0)
 
-		glColor4ubv(self.colBigCube)
+		glColor3ubv(self.colBigCube)
 
 		glEnableClientState(GL_VERTEX_ARRAY)
 		glVertexPointer(3, GL_FLOAT, 0, self.verticesBigCubeA)
-		glDrawElements(GL_LINES, self.numberOfEdgesIndexes, GL_UNSIGNED_BYTE, self.bigCubeEdgesIndexes)
+		glDrawElements(GL_LINES, self.numberOfEdgesVertexes, GL_UNSIGNED_BYTE, self.bigCubeEdgesIndexes)
 		glDisableClientState(GL_VERTEX_ARRAY)
 
-	# draws cubes using VBO
+	### --- draws cubes using VBO --- ###
 	def drawSmallCubes(self, indexesToDisplay, currentVertexVbo):
-		
-		
 		glEnableClientState(GL_COLOR_ARRAY)
 		glColorPointer(3, GL_FLOAT, self.byteStrideBetweenVertexes, currentVertexVbo + int(self.byteStrideBetweenVertexes/2))
 
@@ -233,53 +218,12 @@ class Visualisation():
 		glDisableClientState(GL_COLOR_ARRAY)
 		glDisableClientState(GL_VERTEX_ARRAY)
 
-	def displayWorld(self):			# draw all 
-		self.displaySem.acquire() # take semaphore to display world, so simulation will have to wait
-		try:
-			displayTime = time()
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-			self.drawBigCube()
-
-			glLoadIdentity()
-			glTranslatef(self.translateOnX, self.translateOnY, self.translateOnZ)
-			glRotatef(self.currentRotation, 0, 1, 0)
-
-			for cellsInOneState, currentVertexVbo in zip(self.cellsListToDisplay, self.vertexVbos):
-				if cellsInOneState:			# check if list not empty
-					glColor4ubv(self.colBigCube)
-
-					indexesToDisplay = array('I', [])
-					# indexesToDisplay = numpyArray([], uint32)
-					for cell in cellsInOneState:
-						if cell.isBorderCell or not all(cell.wallMates):			# if border cell or any neighbour is healthy, print cell
-							indexesToDisplay.extend(self.cellsIndexes[cell.myX][cell.myY][cell.myZ])	# normal array
-							# concatenate((indexesToDisplay, self.cellsIndexes[cell.myX][cell.myY][cell.myZ]))	# numpy array
-							# indexesToDisplay = append(indexesToDisplay, self.cellsIndexes[cell.myX][cell.myY][cell.myZ])
-					
-					currentVertexVbo.bind()
-					self.drawSmallCubes(indexesToDisplay, currentVertexVbo)
-					currentVertexVbo.unbind()
-
-			glutSwapBuffers()
-			displayTime = time() - displayTime
-			print("display time: ", displayTime)
-	
-		finally:
-			self.simSem.release()	# end of displaying world, release semaphore for simulation
-			pass
-
 	def startDisplayingWorld(self):
-		self.simSem.acquire()	# take simulation semaphore to initialize itself and display first step
+		self.simulationSemaphore.acquire()	# take simulation semaphore to initialize itself and display first step
 		
 		self.InitGL()
 
-		fun = self.displayWorld
-		print('using displaying function:', fun)
-
-		glutDisplayFunc(fun)
-
+		glutDisplayFunc(self.displayWorld)
 		glutIdleFunc(self.idle)
 		glutReshapeFunc(self.ReSizeGLScene)
 		
