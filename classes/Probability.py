@@ -1,4 +1,4 @@
-
+from sys import exit
 class Probability:
 
 	def __init__(self, **kwargs):
@@ -7,6 +7,11 @@ class Probability:
 		self.denominator = kwargs.get('denominator', -1)
 	
 	def commonDenominator(self, secondProbability):
+    		
+		if (self.denominator == 0 or secondProbability.denominator == 0):
+			print('One of denominators is 0')
+			exit()
+
 		firstDenominator = self.denominator # denominators
 		secondDenominator = secondProbability.denominator
 		
@@ -20,7 +25,3 @@ class Probability:
 
 		self.denominator = commmonDenominator
 		secondProbability.denominator = commmonDenominator
-
-
-
-

@@ -13,8 +13,8 @@ class TestWorld(unittest.TestCase):
         self.myWorld = World(rows = 3, cols = 3, layers = 3, numberOfIterations = 3)
 
     ## --- findOutCellState method --- ###
-    def test_HtoI1StateChangeVar1(self):         # cell.matesInSpecificState(cell.wallMates, self.infected1) >= 1 
-                                                 # cell.matesInSpecificState(cell.lineMates, self.infected1) >= 1 
+    def test_HtoI1StateChangeVar1(self):         # cell.numberOfMatesInSpecificState(cell.wallMates, self.infected1) >= 1 
+                                                 # cell.numberOfMatesInSpecificState(cell.lineMates, self.infected1) >= 1 
         cell = self.myWorld.cellsList[1][0][1]
         cell.myState = 1
         for l in range(self.myWorld.layers):
@@ -29,9 +29,9 @@ class TestWorld(unittest.TestCase):
         for c in cell.pointMates:
             self.assertEqual(c.newState, 0)
             
-    def test_HtoI1StateChangeVar2(self):    # cell.matesInSpecificState(cell.wallMates, self.infected2) >= 5 # I2 cell, wall neighborhood
-                                            # cell.matesInSpecificState(cell.lineMates, self.infected2) >= 9 # I2 cell, line neighborhood
-                                            # cell.matesInSpecificState(cell.pointMates, self.infected2) >= 4 # I2 cell, point neighborhood
+    def test_HtoI1StateChangeVar2(self):    # cell.numberOfMatesInSpecificState(cell.wallMates, self.infected2) >= 5 # I2 cell, wall neighborhood
+                                            # cell.numberOfMatesInSpecificState(cell.lineMates, self.infected2) >= 9 # I2 cell, line neighborhood
+                                            # cell.numberOfMatesInSpecificState(cell.pointMates, self.infected2) >= 4 # I2 cell, point neighborhood
         cell = self.myWorld.cellsList[1][0][1]
         cell.myState = 0
         
