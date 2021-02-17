@@ -6,21 +6,25 @@ class Probability:
 		self.nominator = kwargs.get('nominator', -1)
 		self.denominator = kwargs.get('denominator', -1)
 	
+	###---bring probabilities to a common denominator---###
 	def commonDenominator(self, secondProbability):
     		
 		if (self.denominator == 0 or secondProbability.denominator == 0):
 			print('One of denominators is 0')
 			exit()
 
-		firstDenominator = self.denominator # denominators
+		# denominators
+		firstDenominator = self.denominator 
 		secondDenominator = secondProbability.denominator
 		
-		firstNominator = self.nominator # nominators
+		# nominators
+		firstNominator = self.nominator 
 		secondNominator = secondProbability.nominator
 
 		commmonDenominator = firstDenominator * secondDenominator 
 
-		self.nominator = firstNominator * secondDenominator # updating probabilities
+		# updating probabilities
+		self.nominator = firstNominator * secondDenominator 
 		secondProbability.nominator = secondNominator * firstDenominator
 
 		self.denominator = commmonDenominator

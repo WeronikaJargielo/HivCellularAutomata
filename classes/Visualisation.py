@@ -16,10 +16,10 @@ class Visualisation():
 	def __init__(self,**kwargs):
 
 		self.windowWidth = kwargs.get('windowWidth', 800)	# main window's width
-		self.windowHeight = kwargs.get('windowHeight',600)	# main window's height
+		self.windowHeight = kwargs.get('windowHeight',450)	# main window's height
 
-		self.cellsList = kwargs.get('cellsList', None)
-		self.cellsInAxis = len(self.cellsList)
+		
+		self.cellsInAxis = kwargs.get('cellsInAxis', None)
 		self.lenBigCube = kwargs.get('bigCubeLength', 3)
 		self.lenSmallCube = self.lenBigCube / self.cellsInAxis
 
@@ -34,14 +34,14 @@ class Visualisation():
 		self.yCoefficient = self.numberOfVertexesPerCube * self.cellsInAxis
 		self.zCoefficient = self.numberOfVertexesPerCube
 		
-		self.xTranslation = +self.lenBigCube/4
+		self.xTranslation = +self.lenBigCube/8
 		self.yTranslation = -self.lenBigCube/2
 		self.zTranslation = -3 * self.lenBigCube
 
 		self.currentRotation = 300.0
 		self.rotatingSpeed = 00.0
 
-		self.colBigCube = [255, 255, 255]
+		self.colBigCube = [0, 0, 0]
 
 		self.colAInf1 = [ [0.6, 0.6, 0], [0.9, 0.9, 0],  [0.9, 0.9, 0], [0.8, 0.8, 0], [0.8, 0.8, 0],  [1, 1, 0],  [0.95, 0.95, 0], [1, 1, 0]]
 		self.colAInf2 = [ [0.6, 0.3, 0], [0.9, 0.5, 0],[0.9, 0.5, 0], [0.8, 0.4, 0], [0.8, 0.4, 0], [1, 0.6, 0], [0.95, 0.55, 0], [1, 0.6, 0]]
@@ -73,7 +73,7 @@ class Visualisation():
 		glutInitWindowPosition(100, 100)
 		glutCreateWindow("Simulation Of Hiv Infection")
 
-		glClearColor(0, 0, 0, 1) # set background colour    
+		glClearColor(255, 255, 255, 1) # set background colour    
 		glClearDepth(1.0)
 		glDepthFunc(GL_LESS)
 		glEnable(GL_DEPTH_TEST)
@@ -82,7 +82,7 @@ class Visualisation():
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
 											
-		gluPerspective(120, float(self.windowWidth)/float(self.windowHeight), 0.1, 100.0)
+		gluPerspective(45, float(self.windowWidth)/float(self.windowHeight), 0.1, 100.0)
 
 		glMatrixMode(GL_MODELVIEW)
 
@@ -225,7 +225,7 @@ class Visualisation():
 
 		glutDisplayFunc(self.displayWorld)
 		glutIdleFunc(self.idle)
-		glutReshapeFunc(self.ReSizeGLScene)
+		# glutReshapeFunc(self.ReSizeGLScene)
 		
 		glutMainLoop()
 

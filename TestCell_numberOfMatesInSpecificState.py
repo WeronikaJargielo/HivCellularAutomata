@@ -1,6 +1,7 @@
 import unittest
-from classes.Cell import *
+# from classes.Cell import *
 from classes.World import *
+from classes.Cell import *
 
 class TestCell_numberOfMatesInSpecificState(unittest.TestCase):
     

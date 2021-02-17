@@ -1,7 +1,8 @@
-from classes.Cell import *
-from classes.Probability import *
-from classes.Visualisation import *
-from classes.BoundaryConditions import *
+from classes.Cell import Cell
+from classes.Probability import Probability
+from classes.BoundaryConditions import BoundaryConditions
+from classes.Visualisation import Visualisation
+
 import random
 from time import sleep, time
 from _thread import start_new_thread
@@ -9,8 +10,6 @@ from threading import Semaphore, Thread
 from os import path # library to operate on files
 from sys import exit
 
-import multiprocessing
-from joblib import Parallel, delayed
 
 class World:
 	### --- constructor of class World --- ###
@@ -28,7 +27,7 @@ class World:
 		self.saveSimulation_ON = kwargs.get('saveSimulation_ON', False)
 
 		self.nameOfFile = kwargs.get('nameOfFile', str(random.randint(0,100)))
-		self.nameOfDirForResults = 'results_of_simulation'
+		self.nameOfDirForResults = kwargs.get('results_of_simulations', "results_of_simulations")
 		
 		### --- states --- ###
 		self.healthy = 0
@@ -245,7 +244,8 @@ class World:
 	### --- simulation of world --- ###
 	def simulateWorld(self):
 		if self.visualisation_ON:
-			visualisation = Visualisation(displaySemaphore = self.displaySemaphore,
+			visualisation = Visualisation(cellsInAxis = self.rows,
+										displaySemaphore = self.displaySemaphore,
 										simulationSemaphore = self.simulationSemaphore,
 										cellsList = self.cellsList,
 										cellsListToDisplay = self.cellsListToDisplay
@@ -265,13 +265,17 @@ class World:
 		sleep(1)	# wait for display initialization
 
 		for i in range(self.numberOfIterations):
-			self.singleIteration(visualisation, i)
+			numberOfHealthyCells = self.singleIteration(visualisation, i)
+			# if (numberOfHealthyCells < 250000 and i > 25):
+				# break
 
 
 	### --- performs single iteration of simulation --- ###
 	def singleIteration(self, visualisation, iterationNumber):
+		countedCellsInEachState = [0]
 		if self.saveSimulation_ON:
-			self.saveResultToFile(iterationNumber, self.countCellsInSpecificState())
+			countedCellsInEachState = self.countCellsInSpecificState()
+			self.saveResultToFile(iterationNumber, countedCellsInEachState)
 
 		if self.visualisation_ON:
 			self.simulationSemaphore.acquire()
@@ -292,6 +296,8 @@ class World:
 		finally:
 			if self.visualisation_ON:
 				self.displaySemaphore.release()
+
+		return countedCellsInEachState[0]
 
 	### --- finds out new state of all cells --- ###
 	def findOutAllCellsStates(self):
